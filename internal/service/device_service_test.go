@@ -429,3 +429,267 @@ func TestListDevicesByState_InvalidState(t *testing.T) {
 	assert.Nil(t, devices)
 	assert.True(t, domain.IsValidationError(err))
 }
+
+// ========== UpdateDevice Tests ==========
+
+// TestUpdateDevice_Success tests successful full device update
+func TestUpdateDevice_Success(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockDeviceRepository)
+	svc := service.NewDeviceService(mockRepo)
+	ctx := context.Background()
+
+	deviceID := uuid.New()
+	existingDevice, _ := domain.NewDevice("iPhone 14", "Apple")
+	existingDevice.ID = deviceID
+
+	mockRepo.On("GetByID", ctx, deviceID).Return(existingDevice, nil)
+	mockRepo.On("Update", ctx, mock.AnythingOfType("*domain.Device")).Return(nil)
+
+	// Act
+	device, err := svc.UpdateDevice(ctx, deviceID, "iPhone 15 Pro", "Apple", domain.DeviceStateActive)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.NotNil(t, device)
+	assert.Equal(t, "iPhone 15 Pro", device.Name)
+	assert.Equal(t, "Apple", device.Brand)
+	assert.Equal(t, domain.DeviceStateActive, device.State)
+	mockRepo.AssertExpectations(t)
+}
+
+// TestUpdateDevice_NotFound tests updating non-existent device
+func TestUpdateDevice_NotFound(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockDeviceRepository)
+	svc := service.NewDeviceService(mockRepo)
+	ctx := context.Background()
+
+	deviceID := uuid.New()
+	mockRepo.On("GetByID", ctx, deviceID).Return(nil, domain.ErrDeviceNotFound)
+
+	// Act
+	device, err := svc.UpdateDevice(ctx, deviceID, "iPhone 15", "Apple", domain.DeviceStateActive)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, device)
+	assert.True(t, domain.IsNotFoundError(err))
+	mockRepo.AssertExpectations(t)
+}
+
+// TestUpdateDevice_InUseDevice tests business rule: cannot update in-use device
+func TestUpdateDevice_InUseDevice(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockDeviceRepository)
+	svc := service.NewDeviceService(mockRepo)
+	ctx := context.Background()
+
+	deviceID := uuid.New()
+	inUseDevice, _ := domain.NewDevice("iPhone 14", "Apple")
+	inUseDevice.ID = deviceID
+	inUseDevice.State = domain.DeviceStateInUse
+
+	mockRepo.On("GetByID", ctx, deviceID).Return(inUseDevice, nil)
+
+	// Act
+	device, err := svc.UpdateDevice(ctx, deviceID, "iPhone 15", "Samsung", domain.DeviceStateInUse)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, device)
+	assert.True(t, domain.IsBusinessRuleError(err))
+	mockRepo.AssertExpectations(t)
+}
+
+// TestUpdateDevice_ValidationError tests validation during update
+func TestUpdateDevice_ValidationError(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockDeviceRepository)
+	svc := service.NewDeviceService(mockRepo)
+	ctx := context.Background()
+
+	deviceID := uuid.New()
+	existingDevice, _ := domain.NewDevice("iPhone 14", "Apple")
+	existingDevice.ID = deviceID
+
+	mockRepo.On("GetByID", ctx, deviceID).Return(existingDevice, nil)
+
+	// Act - try to update with invalid name (too short)
+	device, err := svc.UpdateDevice(ctx, deviceID, "ab", "Apple", domain.DeviceStateActive)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, device)
+	assert.True(t, domain.IsValidationError(err))
+	mockRepo.AssertExpectations(t)
+}
+
+// TestUpdateDevice_RepositoryError tests repository failure
+func TestUpdateDevice_RepositoryError(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockDeviceRepository)
+	svc := service.NewDeviceService(mockRepo)
+	ctx := context.Background()
+
+	deviceID := uuid.New()
+	existingDevice, _ := domain.NewDevice("iPhone 14", "Apple")
+	existingDevice.ID = deviceID
+
+	mockRepo.On("GetByID", ctx, deviceID).Return(existingDevice, nil)
+	mockRepo.On("Update", ctx, mock.AnythingOfType("*domain.Device")).Return(errors.New("database error"))
+
+	// Act
+	device, err := svc.UpdateDevice(ctx, deviceID, "iPhone 15", "Apple", domain.DeviceStateActive)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, device)
+	assert.Contains(t, err.Error(), "failed to update device")
+	mockRepo.AssertExpectations(t)
+}
+
+// ========== PartialUpdateDevice Tests ==========
+
+// TestPartialUpdateDevice_Success tests partial device update
+func TestPartialUpdateDevice_Success(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockDeviceRepository)
+	svc := service.NewDeviceService(mockRepo)
+	ctx := context.Background()
+
+	deviceID := uuid.New()
+	existingDevice, _ := domain.NewDevice("iPhone 14", "Apple")
+	existingDevice.ID = deviceID
+
+	newName := "iPhone 15"
+	mockRepo.On("GetByID", ctx, deviceID).Return(existingDevice, nil)
+	mockRepo.On("Update", ctx, mock.AnythingOfType("*domain.Device")).Return(nil)
+
+	// Act - only update name
+	device, err := svc.PartialUpdateDevice(ctx, deviceID, &newName, nil, nil)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.NotNil(t, device)
+	assert.Equal(t, "iPhone 15", device.Name)
+	assert.Equal(t, "Apple", device.Brand) // Brand unchanged
+	mockRepo.AssertExpectations(t)
+}
+
+// TestPartialUpdateDevice_UpdateState tests updating only state
+func TestPartialUpdateDevice_UpdateState(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockDeviceRepository)
+	svc := service.NewDeviceService(mockRepo)
+	ctx := context.Background()
+
+	deviceID := uuid.New()
+	existingDevice, _ := domain.NewDevice("iPhone 14", "Apple")
+	existingDevice.ID = deviceID
+
+	newState := domain.DeviceStateInactive
+	mockRepo.On("GetByID", ctx, deviceID).Return(existingDevice, nil)
+	mockRepo.On("Update", ctx, mock.AnythingOfType("*domain.Device")).Return(nil)
+
+	// Act - only update state
+	device, err := svc.PartialUpdateDevice(ctx, deviceID, nil, nil, &newState)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.NotNil(t, device)
+	assert.Equal(t, domain.DeviceStateInactive, device.State)
+	assert.Equal(t, "iPhone 14", device.Name) // Name unchanged
+	mockRepo.AssertExpectations(t)
+}
+
+// ========== DeleteDevice Tests ==========
+
+// TestDeleteDevice_Success tests successful device deletion
+func TestDeleteDevice_Success(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockDeviceRepository)
+	svc := service.NewDeviceService(mockRepo)
+	ctx := context.Background()
+
+	deviceID := uuid.New()
+	existingDevice, _ := domain.NewDevice("iPhone 14", "Apple")
+	existingDevice.ID = deviceID
+	existingDevice.State = domain.DeviceStateActive
+
+	mockRepo.On("GetByID", ctx, deviceID).Return(existingDevice, nil)
+	mockRepo.On("Delete", ctx, deviceID).Return(nil)
+
+	// Act
+	err := svc.DeleteDevice(ctx, deviceID)
+
+	// Assert
+	assert.NoError(t, err)
+	mockRepo.AssertExpectations(t)
+}
+
+// TestDeleteDevice_NotFound tests deleting non-existent device
+func TestDeleteDevice_NotFound(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockDeviceRepository)
+	svc := service.NewDeviceService(mockRepo)
+	ctx := context.Background()
+
+	deviceID := uuid.New()
+	mockRepo.On("GetByID", ctx, deviceID).Return(nil, domain.ErrDeviceNotFound)
+
+	// Act
+	err := svc.DeleteDevice(ctx, deviceID)
+
+	// Assert
+	assert.Error(t, err)
+	assert.True(t, domain.IsNotFoundError(err))
+	mockRepo.AssertExpectations(t)
+}
+
+// TestDeleteDevice_InUseDevice tests business rule: cannot delete in-use device
+func TestDeleteDevice_InUseDevice(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockDeviceRepository)
+	svc := service.NewDeviceService(mockRepo)
+	ctx := context.Background()
+
+	deviceID := uuid.New()
+	inUseDevice, _ := domain.NewDevice("iPhone 14", "Apple")
+	inUseDevice.ID = deviceID
+	inUseDevice.State = domain.DeviceStateInUse
+
+	mockRepo.On("GetByID", ctx, deviceID).Return(inUseDevice, nil)
+
+	// Act
+	err := svc.DeleteDevice(ctx, deviceID)
+
+	// Assert
+	assert.Error(t, err)
+	assert.True(t, domain.IsBusinessRuleError(err))
+	assert.Contains(t, err.Error(), "in-use")
+	mockRepo.AssertExpectations(t)
+}
+
+// TestDeleteDevice_RepositoryError tests repository failure
+func TestDeleteDevice_RepositoryError(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockDeviceRepository)
+	svc := service.NewDeviceService(mockRepo)
+	ctx := context.Background()
+
+	deviceID := uuid.New()
+	existingDevice, _ := domain.NewDevice("iPhone 14", "Apple")
+	existingDevice.ID = deviceID
+
+	mockRepo.On("GetByID", ctx, deviceID).Return(existingDevice, nil)
+	mockRepo.On("Delete", ctx, deviceID).Return(errors.New("database error"))
+
+	// Act
+	err := svc.DeleteDevice(ctx, deviceID)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to delete device")
+	mockRepo.AssertExpectations(t)
+}
