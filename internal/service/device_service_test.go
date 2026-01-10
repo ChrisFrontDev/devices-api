@@ -175,3 +175,257 @@ func TestCreateDevice_RepositoryError(t *testing.T) {
 	assert.Contains(t, err.Error(), "failed to save device")
 	mockRepo.AssertExpectations(t)
 }
+
+// ========== GetDevice Tests ==========
+
+// TestGetDevice_Success tests successful device retrieval
+func TestGetDevice_Success(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockDeviceRepository)
+	svc := service.NewDeviceService(mockRepo)
+	ctx := context.Background()
+
+	deviceID := uuid.New()
+	expectedDevice, _ := domain.NewDevice("iPhone 15", "Apple")
+	expectedDevice.ID = deviceID
+
+	mockRepo.On("GetByID", ctx, deviceID).Return(expectedDevice, nil)
+
+	// Act
+	device, err := svc.GetDevice(ctx, deviceID)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.NotNil(t, device)
+	assert.Equal(t, deviceID, device.ID)
+	assert.Equal(t, "iPhone 15", device.Name)
+	assert.Equal(t, "Apple", device.Brand)
+	mockRepo.AssertExpectations(t)
+}
+
+// TestGetDevice_NotFound tests device not found error
+func TestGetDevice_NotFound(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockDeviceRepository)
+	svc := service.NewDeviceService(mockRepo)
+	ctx := context.Background()
+
+	deviceID := uuid.New()
+	mockRepo.On("GetByID", ctx, deviceID).Return(nil, domain.ErrDeviceNotFound)
+
+	// Act
+	device, err := svc.GetDevice(ctx, deviceID)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, device)
+	assert.True(t, domain.IsNotFoundError(err))
+	mockRepo.AssertExpectations(t)
+}
+
+// TestGetDevice_RepositoryError tests repository failure
+func TestGetDevice_RepositoryError(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockDeviceRepository)
+	svc := service.NewDeviceService(mockRepo)
+	ctx := context.Background()
+
+	deviceID := uuid.New()
+	repoErr := errors.New("database connection failed")
+	mockRepo.On("GetByID", ctx, deviceID).Return(nil, repoErr)
+
+	// Act
+	device, err := svc.GetDevice(ctx, deviceID)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, device)
+	mockRepo.AssertExpectations(t)
+}
+
+// ========== ListDevices Tests ==========
+
+// TestListDevices_Success tests successful device listing
+func TestListDevices_Success(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockDeviceRepository)
+	svc := service.NewDeviceService(mockRepo)
+	ctx := context.Background()
+
+	device1, _ := domain.NewDevice("iPhone 15", "Apple")
+	device2, _ := domain.NewDevice("Galaxy S24", "Samsung")
+	expectedDevices := []*domain.Device{device1, device2}
+
+	mockRepo.On("List", ctx, 10, 0).Return(expectedDevices, nil)
+
+	// Act
+	devices, err := svc.ListDevices(ctx, 10, 0)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.NotNil(t, devices)
+	assert.Len(t, devices, 2)
+	assert.Equal(t, "iPhone 15", devices[0].Name)
+	assert.Equal(t, "Galaxy S24", devices[1].Name)
+	mockRepo.AssertExpectations(t)
+}
+
+// TestListDevices_EmptyList tests empty device list
+func TestListDevices_EmptyList(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockDeviceRepository)
+	svc := service.NewDeviceService(mockRepo)
+	ctx := context.Background()
+
+	mockRepo.On("List", ctx, 10, 0).Return([]*domain.Device{}, nil)
+
+	// Act
+	devices, err := svc.ListDevices(ctx, 10, 0)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.NotNil(t, devices)
+	assert.Len(t, devices, 0)
+	mockRepo.AssertExpectations(t)
+}
+
+// TestListDevices_WithPagination tests pagination parameters
+func TestListDevices_WithPagination(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockDeviceRepository)
+	svc := service.NewDeviceService(mockRepo)
+	ctx := context.Background()
+
+	device1, _ := domain.NewDevice("iPhone 15", "Apple")
+	expectedDevices := []*domain.Device{device1}
+
+	mockRepo.On("List", ctx, 5, 10).Return(expectedDevices, nil)
+
+	// Act
+	devices, err := svc.ListDevices(ctx, 5, 10)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.NotNil(t, devices)
+	assert.Len(t, devices, 1)
+	mockRepo.AssertExpectations(t)
+}
+
+// TestListDevices_DefaultPagination tests default pagination values
+func TestListDevices_DefaultPagination(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockDeviceRepository)
+	svc := service.NewDeviceService(mockRepo)
+	ctx := context.Background()
+
+	mockRepo.On("List", ctx, 10, 0).Return([]*domain.Device{}, nil)
+
+	// Act - pass invalid values that should be normalized
+	devices, err := svc.ListDevices(ctx, 0, -1)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.NotNil(t, devices)
+	mockRepo.AssertExpectations(t)
+}
+
+// TestListDevices_RepositoryError tests repository failure
+func TestListDevices_RepositoryError(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockDeviceRepository)
+	svc := service.NewDeviceService(mockRepo)
+	ctx := context.Background()
+
+	repoErr := errors.New("database connection failed")
+	mockRepo.On("List", ctx, 10, 0).Return(nil, repoErr)
+
+	// Act
+	devices, err := svc.ListDevices(ctx, 10, 0)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, devices)
+	assert.Contains(t, err.Error(), "failed to list devices")
+	mockRepo.AssertExpectations(t)
+}
+
+// ========== ListDevicesByBrand Tests ==========
+
+// TestListDevicesByBrand_Success tests successful filtering by brand
+func TestListDevicesByBrand_Success(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockDeviceRepository)
+	svc := service.NewDeviceService(mockRepo)
+	ctx := context.Background()
+
+	device1, _ := domain.NewDevice("iPhone 15", "Apple")
+	device2, _ := domain.NewDevice("MacBook Pro", "Apple")
+	expectedDevices := []*domain.Device{device1, device2}
+
+	mockRepo.On("ListByBrand", ctx, "Apple", 10, 0).Return(expectedDevices, nil)
+
+	// Act
+	devices, err := svc.ListDevicesByBrand(ctx, "Apple", 10, 0)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.NotNil(t, devices)
+	assert.Len(t, devices, 2)
+	mockRepo.AssertExpectations(t)
+}
+
+// TestListDevicesByBrand_EmptyBrand tests empty brand validation
+func TestListDevicesByBrand_EmptyBrand(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockDeviceRepository)
+	svc := service.NewDeviceService(mockRepo)
+	ctx := context.Background()
+
+	// Act
+	devices, err := svc.ListDevicesByBrand(ctx, "", 10, 0)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, devices)
+	assert.True(t, domain.IsValidationError(err))
+}
+
+// ========== ListDevicesByState Tests ==========
+
+// TestListDevicesByState_Success tests successful filtering by state
+func TestListDevicesByState_Success(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockDeviceRepository)
+	svc := service.NewDeviceService(mockRepo)
+	ctx := context.Background()
+
+	device1, _ := domain.NewDevice("iPhone 15", "Apple")
+	expectedDevices := []*domain.Device{device1}
+
+	mockRepo.On("ListByState", ctx, domain.DeviceStateActive, 10, 0).Return(expectedDevices, nil)
+
+	// Act
+	devices, err := svc.ListDevicesByState(ctx, domain.DeviceStateActive, 10, 0)
+
+	// Assert
+	assert.NoError(t, err)
+	assert.NotNil(t, devices)
+	assert.Len(t, devices, 1)
+	mockRepo.AssertExpectations(t)
+}
+
+// TestListDevicesByState_InvalidState tests invalid state validation
+func TestListDevicesByState_InvalidState(t *testing.T) {
+	// Arrange
+	mockRepo := new(MockDeviceRepository)
+	svc := service.NewDeviceService(mockRepo)
+	ctx := context.Background()
+
+	// Act
+	devices, err := svc.ListDevicesByState(ctx, domain.DeviceState("invalid-state"), 10, 0)
+
+	// Assert
+	assert.Error(t, err)
+	assert.Nil(t, devices)
+	assert.True(t, domain.IsValidationError(err))
+}
