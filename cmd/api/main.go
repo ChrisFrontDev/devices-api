@@ -2,15 +2,19 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"devices-api/internal/config"
-
-	"github.com/jackc/pgx/v5"
+	httphandler "devices-api/internal/handler/http"
+	"devices-api/internal/repository"
+	"devices-api/internal/service"
+	"devices-api/pkg/database"
 )
 
 func main() {
@@ -32,56 +36,52 @@ func main() {
 	}
 	logger.Info("Config loaded", "http_port", cfg.Server.HTTPPort, "grpc_port", cfg.Server.GRPCPort)
 
-	// 3. Check Database Health
-	logger.Info("Checking database health...")
-	checkDatabaseHealth(ctx, cfg.Database.URL, logger)
+	// 3. Initialize Database Connection Pool
+	logger.Info("Connecting to database...")
+	dbPool, err := database.NewPostgresPool(ctx, cfg.Database.URL)
+	if err != nil {
+		logger.Error("Failed to connect to database", "error", err)
+		os.Exit(1)
+	}
+	defer dbPool.Close()
+	logger.Info("Database connection established")
+
+	// 4. Initialize Layers (Dependency Injection)
+	deviceRepo := repository.NewPostgresDeviceRepository(dbPool)
+	deviceService := service.NewDeviceService(deviceRepo)
+
+	// 5. Setup HTTP Server
+	router := httphandler.SetupRouter(deviceService)
+	httpServer := &http.Server{
+		Addr:         fmt.Sprintf(":%d", cfg.Server.HTTPPort),
+		Handler:      router,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	// 6. Start HTTP Server in a goroutine
+	go func() {
+		logger.Info("Starting HTTP server", "port", cfg.Server.HTTPPort)
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("HTTP server failed", "error", err)
+			os.Exit(1)
+		}
+	}()
 
 	logger.Info("Server is running. Press Ctrl+C to stop.")
 
-	// 4. Wait for termination signal
+	// 7. Wait for termination signal
 	<-ctx.Done()
-	logger.Info("Shutdown signal received. Exiting...")
-}
+	logger.Info("Shutdown signal received. Initiating graceful shutdown...")
 
-func checkDatabaseHealth(ctx context.Context, dbURL string, logger *slog.Logger) {
-	// Retry loop to wait for DB to be ready
-	var conn *pgx.Conn
-	var err error
-	maxRetries := 10
+	// 8. Graceful shutdown with timeout
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-	for i := 0; i < maxRetries; i++ {
-		// Use a short timeout context for connection attempts
-		connCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-		conn, err = pgx.Connect(connCtx, dbURL)
-		cancel()
-
-		if err == nil {
-			break
-		}
-		logger.Warn("Failed to connect to database. Retrying in 2s...", "error", err, "attempt", i+1, "max_retries", maxRetries)
-
-		select {
-		case <-ctx.Done():
-			logger.Info("Shutdown signal received during database connection retry")
-			return // Exit if app is shutting down
-		case <-time.After(2 * time.Second):
-			continue
-		}
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		logger.Error("HTTP server shutdown error", "error", err)
 	}
 
-	if err != nil {
-		logger.Error("Unable to connect to database after retries", "error", err, "max_retries", maxRetries)
-		os.Exit(1)
-	}
-	defer conn.Close(context.Background())
-
-	// Execute a simple query to verify database is operational
-	var greeting string
-	err = conn.QueryRow(context.Background(), "SELECT 'Hello, world!'").Scan(&greeting)
-	if err != nil {
-		logger.Error("Database query failed", "error", err)
-		os.Exit(1)
-	}
-
-	logger.Info("Database health check passed", "message", greeting)
+	logger.Info("Server stopped gracefully")
 }
