@@ -111,3 +111,86 @@ func (s *DeviceService) ListDevicesByState(ctx context.Context, state domain.Dev
 
 	return devices, nil
 }
+
+// UpdateDevice updates an existing device
+// Enforces business rules:
+// - Name and brand cannot be updated if device is in-use
+// - CreatedAt is immutable (enforced by domain)
+func (s *DeviceService) UpdateDevice(ctx context.Context, id uuid.UUID, name, brand string, state domain.DeviceState) (*domain.Device, error) {
+	// Retrieve existing device
+	device, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Apply update with domain validation and business rules
+	if err := device.Update(name, brand, state); err != nil {
+		return nil, err
+	}
+
+	// Persist changes
+	if err := s.repo.Update(ctx, device); err != nil {
+		return nil, fmt.Errorf("failed to update device: %w", err)
+	}
+
+	return device, nil
+}
+
+// PartialUpdateDevice updates specific fields of a device
+// Only updates the fields that are provided (non-empty)
+func (s *DeviceService) PartialUpdateDevice(ctx context.Context, id uuid.UUID, name, brand *string, state *domain.DeviceState) (*domain.Device, error) {
+	// Retrieve existing device
+	device, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Prepare values for update (use existing values if not provided)
+	updatedName := device.Name
+	updatedBrand := device.Brand
+	updatedState := device.State
+
+	if name != nil {
+		updatedName = *name
+	}
+	if brand != nil {
+		updatedBrand = *brand
+	}
+	if state != nil {
+		updatedState = *state
+	}
+
+	// Apply update with domain validation and business rules
+	if err := device.Update(updatedName, updatedBrand, updatedState); err != nil {
+		return nil, err
+	}
+
+	// Persist changes
+	if err := s.repo.Update(ctx, device); err != nil {
+		return nil, fmt.Errorf("failed to update device: %w", err)
+	}
+
+	return device, nil
+}
+
+// DeleteDevice deletes a device
+// Enforces business rule: in-use devices cannot be deleted
+func (s *DeviceService) DeleteDevice(ctx context.Context, id uuid.UUID) error {
+	// Retrieve existing device
+	device, err := s.repo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	// Check if device can be deleted (business rule)
+	if err := device.CanDelete(); err != nil {
+		return err
+	}
+
+	// Delete device
+	if err := s.repo.Delete(ctx, id); err != nil {
+		return fmt.Errorf("failed to delete device: %w", err)
+	}
+
+	return nil
+}
