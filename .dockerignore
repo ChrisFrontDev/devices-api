@@ -1,0 +1,35 @@
+# Git
+.git
+.github
+.gitignore
+
+# IDE
+.idea
+.vscode
+.DS_Store
+
+# Build artifacts
+bin/
+build/
+tmp/
+
+# Logs
+*.log
+
+# Environment files
+.env
+.env.*
+!.env.sample
+
+# Documentation (if not needed in container)
+*.md
+!README.md
+
+# Test files
+*_test.go
+testdata/
+
+# CI/CD
+.pre-commit-config.yaml
+.golangci.yml
+.editorconfig
