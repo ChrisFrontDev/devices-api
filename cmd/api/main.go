@@ -17,6 +17,19 @@ import (
 	"devices-api/pkg/database"
 )
 
+//	@title						Devices API
+//	@version					1.0
+//	@description				A production-ready REST API for managing devices
+//	@description				Built with Go, Clean Architecture, and Domain-Driven Design
+//	@termsOfService				http://swagger.io/terms/
+//	@contact.name				API Support
+//	@contact.email				support@devices-api.com
+//	@license.name				MIT
+//	@license.url				https://opensource.org/licenses/MIT
+//	@host						localhost:8080
+//	@BasePath					/api/v1
+//	@schemes					http https
+
 func main() {
 	// 0. Setup Logger (slog)
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
