@@ -1,19 +1,12 @@
-# golangci-lint configuration
+# golangci-lint v2 configuration
 # https://golangci-lint.run/usage/configuration/
 
-version: 2
+version: "2"
 
 run:
   timeout: 5m
-  tests: false  # Don't lint test files - they have different standards
-  skip-dirs:
-    - vendor
-    - docs
-  skip-files:
-    - ".*_test\\.go$"
 
 linters:
-  disable-all: true
   enable:
     # Critical bug detectors
     - govet         # Go vet - reports suspicious constructs
@@ -33,18 +26,13 @@ linters:
     - gocyclo       # Cyclomatic complexity
     - goconst       # Repeated strings that could be constants
 
-linters-settings:
+settings:
   govet:
     check-shadowing: true
   
   errcheck:
     check-type-assertions: true
     check-blank: true
-    # Exclude common false positives
-    exclude-functions:
-      - (io.Closer).Close
-      - (*database/sql.Rows).Close
-      - (*database/sql.DB).Close
   
   gocyclo:
     min-complexity: 15
@@ -52,13 +40,3 @@ linters-settings:
   goconst:
     min-len: 3
     min-occurrences: 3
-
-issues:
-  exclude-use-default: false
-  max-same-issues: 0
-  exclude-rules:
-    # Exclude testhelper from certain checks
-    - path: 'testhelper/'
-      linters:
-        - errcheck
-        - gosec
