@@ -9,6 +9,7 @@ A production-ready REST API for managing devices, built with Go following Clean 
 - **Business Rules** - Devices in-use cannot change name/brand
 - **Filtering** - List devices by brand or state
 - **Pagination** - Efficient data retrieval with limit/offset
+- **Swagger/OpenAPI** - Interactive API documentation at `/swagger/index.html`
 - **PostgreSQL** - Production-grade database with connection pooling
 - **Docker Ready** - Containerized with distroless images for security
 - **CI/CD Pipeline** - Automated testing and security scanning
@@ -47,6 +48,9 @@ make migrate-up
 
 # Check health
 curl http://localhost:8080/health
+
+# View API documentation
+open http://localhost:8080/swagger/index.html
 ```
 
 ### 3. Test the API
@@ -104,9 +108,22 @@ devices-api/
 
 ## API Endpoints
 
+### Interactive Documentation
+
+**Swagger UI**: [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html)
+
+The Swagger UI provides:
+- Interactive API testing
+- Request/response examples
+- Schema definitions
+- Try-it-out functionality
+
+### REST Endpoints
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/health` | Health check |
+| `GET` | `/swagger/*` | Swagger UI documentation |
 | `POST` | `/api/v1/devices` | Create device |
 | `GET` | `/api/v1/devices` | List all devices |
 | `GET` | `/api/v1/devices?brand=Apple` | Filter by brand |
@@ -117,6 +134,40 @@ devices-api/
 | `DELETE` | `/api/v1/devices/{id}` | Delete device |
 
 ## Development
+
+### Swagger Documentation
+
+This project uses [swaggo/swag](https://github.com/swaggo/swag) for OpenAPI documentation.
+
+**Generate/Update Swagger docs:**
+
+```bash
+# Install swag CLI (if not already installed)
+go install github.com/swaggo/swag/cmd/swag@latest
+
+# Generate swagger docs
+swag init -g cmd/api/main.go -o ./docs --parseDependency --parseInternal
+
+# Or use the Makefile command
+make swagger
+```
+
+**Add Swagger annotations:**
+
+```go
+// @Summary Create a new device
+// @Description Create a new device with name and brand
+// @Tags devices
+// @Accept json
+// @Produce json
+// @Param device body dto.CreateDeviceRequest true "Device data"
+// @Success 201 {object} dto.DeviceResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Router /devices [post]
+func (h *DeviceHandler) CreateDevice(c *gin.Context) {
+    // ...
+}
+```
 
 ### Local Development (without Docker)
 
