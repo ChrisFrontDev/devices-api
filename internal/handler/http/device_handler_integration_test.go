@@ -582,7 +582,8 @@ func TestDeleteDevice_Success(t *testing.T) {
 	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 
 	// Verify device is deleted
-	getResp, _ := http.Get(server.URL + "/api/v1/devices/" + created.ID)
+	getResp, err := http.Get(server.URL + "/api/v1/devices/" + created.ID)
+	require.NoError(t, err)
 	defer getResp.Body.Close()
 	assert.Equal(t, http.StatusNotFound, getResp.StatusCode)
 }
@@ -651,7 +652,8 @@ func TestEndToEndWorkflow(t *testing.T) {
 	assert.NotEmpty(t, created.ID)
 
 	// 2. Get the device
-	getResp, _ := http.Get(server.URL + "/api/v1/devices/" + created.ID)
+	getResp, err := http.Get(server.URL + "/api/v1/devices/" + created.ID)
+	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, getResp.StatusCode)
 	getResp.Body.Close()
 
@@ -673,7 +675,8 @@ func TestEndToEndWorkflow(t *testing.T) {
 	updateResp.Body.Close()
 
 	// 4. List devices
-	listResp, _ := http.Get(server.URL + "/api/v1/devices")
+	listResp, err := http.Get(server.URL + "/api/v1/devices")
+	require.NoError(t, err)
 	var listResult dto.ListDevicesResponse
 	json.NewDecoder(listResp.Body).Decode(&listResult)
 	assert.Equal(t, 1, listResult.Total)
@@ -705,7 +708,8 @@ func TestEndToEndWorkflow(t *testing.T) {
 	deleteResp.Body.Close()
 
 	// 7. Verify device is deleted
-	verifyResp, _ := http.Get(server.URL + "/api/v1/devices/" + created.ID)
+	verifyResp, err := http.Get(server.URL + "/api/v1/devices/" + created.ID)
+	require.NoError(t, err)
 	assert.Equal(t, http.StatusNotFound, verifyResp.StatusCode)
 	verifyResp.Body.Close()
 }
