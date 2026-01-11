@@ -238,7 +238,7 @@ make test-unit                  # Run unit tests only (fast)
 make test-integration           # Run integration tests (requires Docker)
 make test-coverage              # Generate coverage report
 make test-integration-coverage  # Integration coverage report
-make lint                       # Run linters (golangci-lint)
+make lint                       # Run linters (11 enabled: bugs, security, quality)
 make fmt                        # Format code (gofmt + goimports)
 make fmt-check                  # Check code formatting
 make docker-up                  # Start all services
