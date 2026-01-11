@@ -5,4 +5,30 @@ bin/
 build/
 *.log
 tmp/
+
+# Environment files (SECURITY: Never commit these!)
 .env
+.env.local
+.env.*.local
+.env.development
+.env.staging
+.env.production
+.env.test
+
+# Secrets and credentials
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+secrets/
+credentials/
+
+# Test coverage
+coverage.out
+coverage.html
+
+# Temporary files
+*.swp
+*.swo
+*~
