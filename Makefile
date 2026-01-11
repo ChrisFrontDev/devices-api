@@ -1,4 +1,4 @@
-.PHONY: run build test test-unit test-integration test-coverage test-integration-coverage lint proto clean help docker-build docker-run docker-up docker-down docker-logs db-up db-down migrate-up migrate-down swagger
+.PHONY: run build test test-unit test-integration test-coverage test-integration-coverage lint fmt fmt-check proto clean help docker-build docker-run docker-up docker-down docker-logs db-up db-down migrate-up migrate-down swagger
 
 # Variables
 APP_NAME := devices-api
@@ -61,6 +61,27 @@ test-integration-coverage: ## Run integration tests with coverage report
 
 lint: ## Run linters
 	golangci-lint run
+
+fmt: ## Format code with gofmt and goimports
+	@echo "Formatting code..."
+	gofmt -s -w .
+	@if command -v goimports > /dev/null; then \
+		goimports -w -local devices-api .; \
+	else \
+		echo "Warning: goimports not found. Install with: go install golang.org/x/tools/cmd/goimports@latest"; \
+	fi
+	@echo "✓ Code formatted"
+
+fmt-check: ## Check if code is formatted
+	@echo "Checking code formatting..."
+	@UNFORMATTED=$$(gofmt -l .); \
+	if [ -n "$$UNFORMATTED" ]; then \
+		echo "The following files are not formatted:"; \
+		echo "$$UNFORMATTED"; \
+		echo "Run 'make fmt' to format them."; \
+		exit 1; \
+	fi
+	@echo "✓ All files are properly formatted"
 
 swagger: ## Generate Swagger documentation
 	@echo "Generating Swagger docs..."
