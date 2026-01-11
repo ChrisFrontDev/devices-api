@@ -40,20 +40,20 @@ func NewPostgresContainer(ctx context.Context) (*PostgresContainer, error) {
 
 	connStr, err := container.ConnectionString(ctx, "sslmode=disable")
 	if err != nil {
-		container.Terminate(ctx)
+		_ = container.Terminate(ctx)
 		return nil, fmt.Errorf("failed to get connection string: %w", err)
 	}
 
 	pool, err := pgxpool.New(ctx, connStr)
 	if err != nil {
-		container.Terminate(ctx)
+		_ = container.Terminate(ctx)
 		return nil, fmt.Errorf("failed to create connection pool: %w", err)
 	}
 
 	// Verify connection
 	if err := pool.Ping(ctx); err != nil {
 		pool.Close()
-		container.Terminate(ctx)
+		_ = container.Terminate(ctx)
 		return nil, fmt.Errorf("failed to ping database: %w", err)
 	}
 
@@ -85,6 +85,7 @@ func (pc *PostgresContainer) ApplyMigrations(ctx context.Context, migrationsPath
 	sort.Strings(files)
 
 	for _, file := range files {
+		// #nosec G304 - file path is from controlled migrations directory
 		sql, err := os.ReadFile(file)
 		if err != nil {
 			return fmt.Errorf("failed to read migration file %s: %w", file, err)
