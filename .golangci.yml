@@ -1,19 +1,64 @@
+# golangci-lint configuration
+# https://golangci-lint.run/usage/configuration/
+
+version: 2
+
 run:
   timeout: 5m
+  tests: false  # Don't lint test files - they have different standards
+  skip-dirs:
+    - vendor
+    - docs
+  skip-files:
+    - ".*_test\\.go$"
 
 linters:
+  disable-all: true
   enable:
-    - errcheck
-    - gosimple
-    - govet
-    - ineffassign
-    - staticcheck
-    - unused
-    - gofmt
-    - goimports
-    - misspell
-    - revive
+    # Critical bug detectors
+    - govet         # Go vet - reports suspicious constructs
+    - staticcheck   # Comprehensive static analysis
+    - unused        # Detects unused code
+    - ineffassign   # Detects ineffectual assignments
+    
+    # Security
+    - gosec         # Security issues scanner
+    
+    # Error handling
+    - errcheck      # Checks for unchecked errors
+    - errorlint     # Error wrapping in Go 1.13+
+    
+    # Code quality
+    - misspell      # Spelling mistakes
+    - gocyclo       # Cyclomatic complexity
+    - goconst       # Repeated strings that could be constants
 
 linters-settings:
-  goimports:
-    local-prefixes: devices-api
+  govet:
+    check-shadowing: true
+  
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+    # Exclude common false positives
+    exclude-functions:
+      - (io.Closer).Close
+      - (*database/sql.Rows).Close
+      - (*database/sql.DB).Close
+  
+  gocyclo:
+    min-complexity: 15
+  
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+
+issues:
+  exclude-use-default: false
+  max-same-issues: 0
+  exclude-rules:
+    # Exclude testhelper from certain checks
+    - path: 'testhelper/'
+      linters:
+        - errcheck
+        - gosec
