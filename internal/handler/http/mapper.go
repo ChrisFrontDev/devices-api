@@ -8,7 +8,7 @@ import (
 // MapDeviceToResponse converts a domain device to a response DTO
 func MapDeviceToResponse(device *domain.Device) dto.DeviceResponse {
 	return dto.DeviceResponse{
-		ID:        device.ID,
+		ID:        device.ID.String(),
 		Name:      device.Name,
 		Brand:     device.Brand,
 		State:     string(device.State),

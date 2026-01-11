@@ -2,8 +2,6 @@ package dto
 
 import (
 	"time"
-
-	"github.com/google/uuid"
 )
 
 // CreateDeviceRequest represents the request to create a device
@@ -28,7 +26,7 @@ type PartialUpdateDeviceRequest struct {
 
 // DeviceResponse represents a device in the API response
 type DeviceResponse struct {
-	ID        uuid.UUID `json:"id"`
+	ID        string    `json:"id"`
 	Name      string    `json:"name"`
 	Brand     string    `json:"brand"`
 	State     string    `json:"state"`
