@@ -44,6 +44,9 @@ cp env.sample .env
 # Start all services (API + PostgreSQL)
 docker-compose up -d
 
+# Load environment variables (required for migrations)
+set -a; source .env; set +a
+
 # Run database migrations
 make migrate-up
 
