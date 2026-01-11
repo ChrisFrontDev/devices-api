@@ -40,7 +40,7 @@ A production-ready REST API for managing devices, built with Go following Clean 
   ```bash
   # macOS
   brew install jq
-  
+
   # Linux
   sudo apt-get install jq
   ```
@@ -396,6 +396,16 @@ GitHub Actions pipeline includes:
 5. Run tests before committing - `make test`
 6. Ensure linting passes - `make lint`
 
+
+## Future Improvements
+
+- [ ] gRPC support (protocol buffers already in `pkg/pb/`)
+- [ ] Structured logging (zerolog/zap)
+- [ ] Metrics and monitoring (Prometheus/Grafana)
+- [ ] Kubernetes deployment
+- [ ] Device history and audit logs
+- [ ] Bulk operations (batch create/update/delete)
+- [ ] Load testing setup
 
 ## Support
 
