@@ -1,0 +1,322 @@
+basePath: /api/v1
+definitions:
+  devices-api_internal_handler_http_dto.CreateDeviceRequest:
+    properties:
+      brand:
+        maxLength: 50
+        minLength: 2
+        type: string
+      name:
+        maxLength: 100
+        minLength: 3
+        type: string
+    required:
+    - brand
+    - name
+    type: object
+  devices-api_internal_handler_http_dto.DeviceResponse:
+    properties:
+      brand:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      state:
+        type: string
+    type: object
+  devices-api_internal_handler_http_dto.ErrorResponse:
+    properties:
+      error:
+        type: string
+      field:
+        type: string
+      message:
+        type: string
+    type: object
+  devices-api_internal_handler_http_dto.ListDevicesResponse:
+    properties:
+      devices:
+        items:
+          $ref: '#/definitions/devices-api_internal_handler_http_dto.DeviceResponse'
+        type: array
+      limit:
+        type: integer
+      offset:
+        type: integer
+      total:
+        type: integer
+    type: object
+  devices-api_internal_handler_http_dto.PartialUpdateDeviceRequest:
+    properties:
+      brand:
+        maxLength: 50
+        minLength: 2
+        type: string
+      name:
+        maxLength: 100
+        minLength: 3
+        type: string
+      state:
+        enum:
+        - active
+        - in-use
+        - inactive
+        type: string
+    type: object
+  devices-api_internal_handler_http_dto.UpdateDeviceRequest:
+    properties:
+      brand:
+        maxLength: 50
+        minLength: 2
+        type: string
+      name:
+        maxLength: 100
+        minLength: 3
+        type: string
+      state:
+        enum:
+        - active
+        - in-use
+        - inactive
+        type: string
+    required:
+    - brand
+    - name
+    - state
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@devices-api.com
+    name: API Support
+  description: |-
+    A production-ready REST API for managing devices
+    Built with Go, Clean Architecture, and Domain-Driven Design
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Devices API
+  version: "1.0"
+paths:
+  /devices:
+    get:
+      description: Get all devices with optional pagination, brand, or state filters
+      parameters:
+      - default: 10
+        description: Limit
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Offset
+        in: query
+        name: offset
+        type: integer
+      - description: Filter by brand
+        in: query
+        name: brand
+        type: string
+      - description: Filter by state (active, in-use, inactive)
+        in: query
+        name: state
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.ListDevicesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.ErrorResponse'
+      summary: List all devices
+      tags:
+      - devices
+    post:
+      consumes:
+      - application/json
+      description: Create a new device with name and brand
+      parameters:
+      - description: Device data
+        in: body
+        name: device
+        required: true
+        schema:
+          $ref: '#/definitions/devices-api_internal_handler_http_dto.CreateDeviceRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.DeviceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.ErrorResponse'
+      summary: Create a new device
+      tags:
+      - devices
+  /devices/{id}:
+    delete:
+      description: Delete an existing device
+      parameters:
+      - description: Device ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.ErrorResponse'
+      summary: Delete a device
+      tags:
+      - devices
+    get:
+      description: Get a single device by its ID
+      parameters:
+      - description: Device ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.DeviceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.ErrorResponse'
+      summary: Get a device by ID
+      tags:
+      - devices
+    patch:
+      consumes:
+      - application/json
+      description: Partially update an existing device (only provided fields are updated)
+      parameters:
+      - description: Device ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Device data
+        in: body
+        name: device
+        required: true
+        schema:
+          $ref: '#/definitions/devices-api_internal_handler_http_dto.PartialUpdateDeviceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.DeviceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.ErrorResponse'
+      summary: Partially update a device
+      tags:
+      - devices
+    put:
+      consumes:
+      - application/json
+      description: Fully update an existing device (all fields required)
+      parameters:
+      - description: Device ID (UUID)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Device data
+        in: body
+        name: device
+        required: true
+        schema:
+          $ref: '#/definitions/devices-api_internal_handler_http_dto.UpdateDeviceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.DeviceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/devices-api_internal_handler_http_dto.ErrorResponse'
+      summary: Fully update a device
+      tags:
+      - devices
+schemes:
+- http
+- https
+swagger: "2.0"
