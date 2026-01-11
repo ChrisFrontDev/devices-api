@@ -20,9 +20,40 @@ A production-ready REST API for managing devices, built with Go following Clean 
 
 ### Prerequisites
 
+**Required:**
 - Go 1.23+
 - Docker & Docker Compose
-- PostgreSQL 16+ (if running locally)
+- Make (for Makefile commands)
+
+**Optional (for specific tasks):**
+- PostgreSQL 16+ (only if running without Docker)
+- [golangci-lint](https://golangci-lint.run/usage/install/) (for linting: `make lint`)
+- [swag](https://github.com/swaggo/swag) (for Swagger docs: `make swagger`)
+  ```bash
+  go install github.com/swaggo/swag/cmd/swag@latest
+  ```
+- `jq` (for parsing JSON in API examples)
+  ```bash
+  # macOS
+  brew install jq
+  
+  # Linux
+  sudo apt-get install jq
+  ```
+
+**Verify your setup:**
+```bash
+# Check required tools
+go version          # Should be 1.23+
+docker --version    # Docker installed
+docker-compose --version  # Docker Compose installed
+make --version      # Make installed
+
+# Check optional tools (if needed)
+golangci-lint --version   # For linting
+swag --version            # For Swagger docs
+jq --version              # For JSON parsing
+```
 
 ### 1. Clone and Setup
 
