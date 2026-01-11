@@ -1,4 +1,4 @@
-.PHONY: run build test lint proto clean help docker-build docker-run docker-up docker-down docker-logs db-up db-down migrate-up migrate-down swagger
+.PHONY: run build test test-unit test-integration test-coverage test-integration-coverage lint proto clean help docker-build docker-run docker-up docker-down docker-logs db-up db-down migrate-up migrate-down swagger
 
 # Variables
 APP_NAME := devices-api
@@ -40,10 +40,24 @@ build: ## Build the application binary
 test: ## Run all tests with race detector
 	go test -v -race ./...
 
+test-unit: ## Run only unit tests (excluding integration tests)
+	go test -v -race -short ./...
+
+test-integration: ## Run only integration tests with testcontainers
+	@echo "Running integration tests with testcontainers..."
+	@echo "Note: Docker must be running for testcontainers to work"
+	go test -v -race ./internal/repository/... ./internal/handler/http/...
+
 test-coverage: ## Run tests with coverage report
 	go test -v -race -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report: coverage.html"
+
+test-integration-coverage: ## Run integration tests with coverage report
+	@echo "Running integration tests with coverage..."
+	go test -v -race -coverprofile=coverage-integration.out ./internal/repository/... ./internal/handler/http/...
+	go tool cover -html=coverage-integration.out -o coverage-integration.html
+	@echo "Integration coverage report: coverage-integration.html"
 
 lint: ## Run linters
 	golangci-lint run
@@ -63,7 +77,7 @@ proto: ## Generate protobuf files using Buf
 clean: ## Clean build artifacts
 	rm -rf $(BIN_DIR)
 	rm -rf pkg/pb/*.go
-	rm -f coverage.out coverage.html
+	rm -f coverage.out coverage.html coverage-integration.out coverage-integration.html
 
 docker-build: ## Build Docker image
 	docker build -t $(APP_NAME) .
