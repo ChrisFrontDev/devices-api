@@ -12,10 +12,20 @@ import (
 type DeviceState string
 
 const (
-	DeviceStateActive  DeviceState = "active"
-	DeviceStateInUse   DeviceState = "in-use"
+	DeviceStateActive   DeviceState = "active"
+	DeviceStateInUse    DeviceState = "in-use"
 	DeviceStateInactive DeviceState = "inactive"
 )
+
+// IsValid checks if the device state is valid
+func (s DeviceState) IsValid() error {
+	switch s {
+	case DeviceStateActive, DeviceStateInUse, DeviceStateInactive:
+		return nil
+	default:
+		return NewValidationError("state", fmt.Sprintf("invalid state: %s (must be: active, in-use, or inactive)", s))
+	}
+}
 
 // Device represents a hardware device in the system
 type Device struct {
@@ -100,19 +110,18 @@ func (d *Device) ValidateBrand() error {
 
 // ValidateState validates the device state
 func (d *Device) ValidateState() error {
-	switch d.State {
-	case DeviceStateActive, DeviceStateInUse, DeviceStateInactive:
-		return nil
-	default:
-		return NewValidationError("state", fmt.Sprintf("invalid state: %s (must be: active, in-use, or inactive)", d.State))
-	}
+	return d.State.IsValid()
 }
 
 // CanUpdate checks if the device can be updated based on business rules
 // Devices in "in-use" state cannot have their name or brand updated
-func (d *Device) CanUpdate() error {
+// But state changes are allowed
+func (d *Device) CanUpdate(newName, newBrand string) error {
 	if d.State == DeviceStateInUse {
-		return NewBusinessRuleError("cannot update device in 'in-use' state")
+		// Only block if name or brand is being changed
+		if d.Name != newName || d.Brand != newBrand {
+			return NewBusinessRuleError("cannot update name or brand of device in 'in-use' state")
+		}
 	}
 	return nil
 }
@@ -128,7 +137,8 @@ func (d *Device) CanDelete() error {
 
 // Update updates the device fields with validation
 func (d *Device) Update(name, brand string, state DeviceState) error {
-	if err := d.CanUpdate(); err != nil {
+	// Check business rules
+	if err := d.CanUpdate(name, brand); err != nil {
 		return err
 	}
 
@@ -151,10 +161,4 @@ func (d *Device) Update(name, brand string, state DeviceState) error {
 	d.State = state
 
 	return nil
-}
-
-// SetState changes the device state
-func (d *Device) SetState(state DeviceState) error {
-	d.State = state
-	return d.ValidateState()
 }
