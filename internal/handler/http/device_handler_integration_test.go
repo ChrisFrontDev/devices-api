@@ -98,7 +98,8 @@ func TestCreateDevice_Success(t *testing.T) {
 		Brand: "Apple",
 	}
 
-	body, _ := json.Marshal(payload)
+	body, err := json.Marshal(payload)
+	require.NoError(t, err)
 	resp, err := http.Post(
 		server.URL+"/api/v1/devices",
 		"application/json",
@@ -129,7 +130,8 @@ func TestCreateDevice_ValidationError_EmptyName(t *testing.T) {
 		Brand: "Apple",
 	}
 
-	body, _ := json.Marshal(payload)
+	body, err := json.Marshal(payload)
+	require.NoError(t, err)
 	resp, err := http.Post(
 		server.URL+"/api/v1/devices",
 		"application/json",
@@ -156,7 +158,8 @@ func TestCreateDevice_ValidationError_ShortName(t *testing.T) {
 		Brand: "Apple",
 	}
 
-	body, _ := json.Marshal(payload)
+	body, err := json.Marshal(payload)
+	require.NoError(t, err)
 	resp, err := http.Post(
 		server.URL+"/api/v1/devices",
 		"application/json",
@@ -389,12 +392,14 @@ func TestUpdateDevice_Success(t *testing.T) {
 		State: "in-use",
 	}
 
-	body, _ := json.Marshal(payload)
-	req, _ := http.NewRequest(
+	body, err := json.Marshal(payload)
+	require.NoError(t, err)
+	req, err := http.NewRequest(
 		http.MethodPut,
 		server.URL+"/api/v1/devices/"+created.ID,
 		bytes.NewBuffer(body),
 	)
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
@@ -422,13 +427,15 @@ func TestUpdateDevice_NotFound(t *testing.T) {
 		State: "active",
 	}
 
-	body, _ := json.Marshal(payload)
+	body, err := json.Marshal(payload)
+	require.NoError(t, err)
 	nonExistentID := uuid.New().String()
-	req, _ := http.NewRequest(
+	req, err := http.NewRequest(
 		http.MethodPut,
 		server.URL+"/api/v1/devices/"+nonExistentID,
 		bytes.NewBuffer(body),
 	)
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
@@ -452,14 +459,17 @@ func TestUpdateDevice_CannotUpdateInUseDevice(t *testing.T) {
 		Brand: "Apple",
 		State: "in-use",
 	}
-	body1, _ := json.Marshal(updateToInUse)
-	req1, _ := http.NewRequest(
+	body1, err := json.Marshal(updateToInUse)
+	require.NoError(t, err)
+	req1, err := http.NewRequest(
 		http.MethodPut,
 		server.URL+"/api/v1/devices/"+created.ID,
 		bytes.NewBuffer(body1),
 	)
+	require.NoError(t, err)
 	req1.Header.Set("Content-Type", "application/json")
-	resp1, _ := http.DefaultClient.Do(req1)
+	resp1, err := http.DefaultClient.Do(req1)
+	require.NoError(t, err)
 	resp1.Body.Close()
 
 	// Try to update again (should fail)
@@ -468,12 +478,14 @@ func TestUpdateDevice_CannotUpdateInUseDevice(t *testing.T) {
 		Brand: "Samsung",
 		State: "in-use",
 	}
-	body2, _ := json.Marshal(updatePayload)
-	req2, _ := http.NewRequest(
+	body2, err := json.Marshal(updatePayload)
+	require.NoError(t, err)
+	req2, err := http.NewRequest(
 		http.MethodPut,
 		server.URL+"/api/v1/devices/"+created.ID,
 		bytes.NewBuffer(body2),
 	)
+	require.NoError(t, err)
 	req2.Header.Set("Content-Type", "application/json")
 
 	resp2, err := http.DefaultClient.Do(req2)
@@ -503,12 +515,14 @@ func TestPartialUpdateDevice_UpdateName(t *testing.T) {
 		Name: stringPtr("iPhone 15"),
 	}
 
-	body, _ := json.Marshal(payload)
-	req, _ := http.NewRequest(
+	body, err := json.Marshal(payload)
+	require.NoError(t, err)
+	req, err := http.NewRequest(
 		http.MethodPatch,
 		server.URL+"/api/v1/devices/"+created.ID,
 		bytes.NewBuffer(body),
 	)
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
@@ -537,12 +551,14 @@ func TestPartialUpdateDevice_UpdateState(t *testing.T) {
 		State: stringPtr("inactive"),
 	}
 
-	body, _ := json.Marshal(payload)
-	req, _ := http.NewRequest(
+	body, err := json.Marshal(payload)
+	require.NoError(t, err)
+	req, err := http.NewRequest(
 		http.MethodPatch,
 		server.URL+"/api/v1/devices/"+created.ID,
 		bytes.NewBuffer(body),
 	)
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
@@ -569,11 +585,12 @@ func TestDeleteDevice_Success(t *testing.T) {
 	created := createTestDevice(t, server, "iPhone 15", "Apple")
 
 	// Delete the device
-	req, _ := http.NewRequest(
+	req, err := http.NewRequest(
 		http.MethodDelete,
 		server.URL+"/api/v1/devices/"+created.ID,
 		nil,
 	)
+	require.NoError(t, err)
 
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
@@ -594,11 +611,12 @@ func TestDeleteDevice_NotFound(t *testing.T) {
 	defer server.Close()
 
 	nonExistentID := uuid.New().String()
-	req, _ := http.NewRequest(
+	req, err := http.NewRequest(
 		http.MethodDelete,
 		server.URL+"/api/v1/devices/"+nonExistentID,
 		nil,
 	)
+	require.NoError(t, err)
 
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
@@ -622,11 +640,12 @@ func TestDeleteDevice_CannotDeleteInUseDevice(t *testing.T) {
 	updateTestDevice(t, server, created.ID, updatePayload)
 
 	// Try to delete
-	req, _ := http.NewRequest(
+	req, err := http.NewRequest(
 		http.MethodDelete,
 		server.URL+"/api/v1/devices/"+created.ID,
 		nil,
 	)
+	require.NoError(t, err)
 
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
@@ -663,14 +682,17 @@ func TestEndToEndWorkflow(t *testing.T) {
 		Brand: "Apple",
 		State: "in-use",
 	}
-	body, _ := json.Marshal(updatePayload)
-	updateReq, _ := http.NewRequest(
+	body, err := json.Marshal(updatePayload)
+	require.NoError(t, err)
+	updateReq, err := http.NewRequest(
 		http.MethodPut,
 		server.URL+"/api/v1/devices/"+created.ID,
 		bytes.NewBuffer(body),
 	)
+	require.NoError(t, err)
 	updateReq.Header.Set("Content-Type", "application/json")
-	updateResp, _ := http.DefaultClient.Do(updateReq)
+	updateResp, err := http.DefaultClient.Do(updateReq)
+	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, updateResp.StatusCode)
 	updateResp.Body.Close()
 
@@ -678,7 +700,8 @@ func TestEndToEndWorkflow(t *testing.T) {
 	listResp, err := http.Get(server.URL + "/api/v1/devices")
 	require.NoError(t, err)
 	var listResult dto.ListDevicesResponse
-	json.NewDecoder(listResp.Body).Decode(&listResult)
+	err = json.NewDecoder(listResp.Body).Decode(&listResult)
+	require.NoError(t, err)
 	assert.Equal(t, 1, listResult.Total)
 	listResp.Body.Close()
 
@@ -686,24 +709,29 @@ func TestEndToEndWorkflow(t *testing.T) {
 	patchPayload := dto.PartialUpdateDeviceRequest{
 		State: stringPtr("inactive"),
 	}
-	patchBody, _ := json.Marshal(patchPayload)
-	patchReq, _ := http.NewRequest(
+	patchBody, err := json.Marshal(patchPayload)
+	require.NoError(t, err)
+	patchReq, err := http.NewRequest(
 		http.MethodPatch,
 		server.URL+"/api/v1/devices/"+created.ID,
 		bytes.NewBuffer(patchBody),
 	)
+	require.NoError(t, err)
 	patchReq.Header.Set("Content-Type", "application/json")
-	patchResp, _ := http.DefaultClient.Do(patchReq)
+	patchResp, err := http.DefaultClient.Do(patchReq)
+	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, patchResp.StatusCode)
 	patchResp.Body.Close()
 
 	// 6. Delete the device
-	deleteReq, _ := http.NewRequest(
+	deleteReq, err := http.NewRequest(
 		http.MethodDelete,
 		server.URL+"/api/v1/devices/"+created.ID,
 		nil,
 	)
-	deleteResp, _ := http.DefaultClient.Do(deleteReq)
+	require.NoError(t, err)
+	deleteResp, err := http.DefaultClient.Do(deleteReq)
+	require.NoError(t, err)
 	assert.Equal(t, http.StatusNoContent, deleteResp.StatusCode)
 	deleteResp.Body.Close()
 
@@ -722,7 +750,8 @@ func createTestDevice(t *testing.T, server *httptest.Server, name, brand string)
 		Brand: brand,
 	}
 
-	body, _ := json.Marshal(payload)
+	body, err := json.Marshal(payload)
+	require.NoError(t, err)
 	resp, err := http.Post(
 		server.URL+"/api/v1/devices",
 		"application/json",
@@ -739,12 +768,14 @@ func createTestDevice(t *testing.T, server *httptest.Server, name, brand string)
 }
 
 func updateTestDevice(t *testing.T, server *httptest.Server, deviceID string, payload dto.PartialUpdateDeviceRequest) {
-	body, _ := json.Marshal(payload)
-	req, _ := http.NewRequest(
+	body, err := json.Marshal(payload)
+	require.NoError(t, err)
+	req, err := http.NewRequest(
 		http.MethodPatch,
 		server.URL+"/api/v1/devices/"+deviceID,
 		bytes.NewBuffer(body),
 	)
+	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
