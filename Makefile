@@ -1,4 +1,4 @@
-.PHONY: run build test lint proto clean help docker-build docker-run docker-up docker-down docker-logs db-up db-down migrate-up migrate-down
+.PHONY: run build test lint proto clean help docker-build docker-run docker-up docker-down docker-logs db-up db-down migrate-up migrate-down swagger
 
 # Variables
 APP_NAME := devices-api
@@ -47,6 +47,15 @@ test-coverage: ## Run tests with coverage report
 
 lint: ## Run linters
 	golangci-lint run
+
+swagger: ## Generate Swagger documentation
+	@echo "Generating Swagger docs..."
+	@if ! command -v swag > /dev/null; then \
+		echo "Error: swag not found. Install with: go install github.com/swaggo/swag/cmd/swag@latest"; \
+		exit 1; \
+	fi
+	swag init -g cmd/api/main.go -o ./docs --parseDependency --parseInternal
+	@echo "Swagger docs generated at ./docs"
 
 proto: ## Generate protobuf files using Buf
 	buf generate
