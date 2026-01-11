@@ -1,35 +1,61 @@
+# ==================================
+# .dockerignore
+# ==================================
+# Excludes files from Docker build context for faster builds
+
 # Git
 .git
-.github
 .gitignore
+.github
 
 # IDE
 .idea
 .vscode
 .DS_Store
+*.swp
+*.swo
+*~
 
 # Build artifacts
 bin/
 build/
 tmp/
+*.exe
+*.test
 
 # Logs
 *.log
 
-# Environment files
+# Environment files (SECURITY: never include in image!)
 .env
 .env.*
-!.env.sample
+!env.sample
 
-# Documentation (if not needed in container)
+# Documentation (not needed in container)
 *.md
 !README.md
+DEPLOYMENT.md
+SECURITY.md
 
-# Test files
+# Test files (reduce image size)
 *_test.go
 testdata/
+coverage.out
+coverage.html
 
 # CI/CD
 .pre-commit-config.yaml
 .golangci.yml
 .editorconfig
+.github/
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Kubernetes
+k8s/
+
+# Makefile (not needed in production image)
+Makefile
