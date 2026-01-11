@@ -14,6 +14,7 @@ A production-ready REST API for managing devices, built with Go following Clean 
 - **Docker Ready** - Containerized with distroless images for security
 - **CI/CD Pipeline** - Automated testing and security scanning
 - **Health Checks** - Built-in endpoint for monitoring
+- **Integration Tests** - 43 tests with real PostgreSQL via testcontainers
 
 ## Quick Start
 
@@ -93,10 +94,11 @@ devices-api/
 ├── internal/
 │   ├── config/           # Configuration management
 │   ├── domain/           # Business entities and rules
-│   ├── service/          # Business logic
-│   ├── repository/       # Data access layer
+│   ├── service/          # Business logic (+ unit tests)
+│   ├── repository/       # Data access layer (+ integration tests)
+│   ├── testhelper/       # Test utilities (testcontainers)
 │   └── handler/
-│       └── http/         # HTTP handlers (REST API)
+│       └── http/         # HTTP handlers (+ integration tests)
 ├── pkg/
 │   ├── database/         # Database utilities
 │   └── pb/               # Protocol buffers (future gRPC)
@@ -191,30 +193,68 @@ go run cmd/api/main.go
 ### Make Commands
 
 ```bash
-make help              # Show all available commands
-make test              # Run tests
-make test-coverage     # Run tests with coverage report
-make lint              # Run linter (golangci-lint)
-make docker-up         # Start all services
-make docker-down       # Stop all services
-make db-up             # Start only PostgreSQL
-make migrate-up        # Run migrations
-make migrate-down      # Rollback migrations
+make help                       # Show all available commands
+make test                       # Run all tests (unit + integration)
+make test-unit                  # Run unit tests only (fast)
+make test-integration           # Run integration tests (requires Docker)
+make test-coverage              # Generate coverage report
+make test-integration-coverage  # Integration coverage report
+make lint                       # Run linter (golangci-lint)
+make docker-up                  # Start all services
+make docker-down                # Stop all services
+make db-up                      # Start only PostgreSQL
+make migrate-up                 # Run migrations
+make migrate-down               # Rollback migrations
 ```
 
 ### Running Tests
 
+This project has both **unit tests** and **integration tests** with real PostgreSQL databases.
+
 ```bash
-# Unit tests
-go test ./internal/...
+# Run all tests (unit + integration)
+make test
 
-# With coverage
-go test -v -race -coverprofile=coverage.out ./internal/...
-go tool cover -html=coverage.out
+# Run only unit tests (fast)
+make test-unit
 
-# Or use Makefile
+# Run only integration tests (requires Docker)
+make test-integration
+
+# Generate coverage report
 make test-coverage
 ```
+
+#### Integration Tests
+
+Integration tests use [testcontainers-go](https://golang.testcontainers.org/) to spin up real PostgreSQL containers automatically.
+
+**Requirements:**
+- Docker must be running
+- No manual database setup needed
+
+**What's tested:**
+- ✅ **43 integration tests** covering all features
+- ✅ Real database operations (CRUD, filtering, pagination)
+- ✅ All REST API endpoints end-to-end
+- ✅ Business rules enforcement
+- ✅ Error handling and edge cases
+
+**Test execution:**
+```bash
+# Integration tests only (~7 seconds)
+make test-integration
+
+# With coverage report
+make test-integration-coverage
+open coverage-integration.html
+```
+
+Testcontainers automatically handles:
+- Starting PostgreSQL container
+- Running migrations
+- Cleaning up after tests
+- No ports conflicts or manual cleanup needed
 
 ## Environment Variables
 
@@ -273,12 +313,35 @@ This project follows **Clean Architecture** principles:
 - **Rotate passwords** regularly and use strong, unique passwords
 - **Review** `SECURITY.md` for detailed security guidelines
 
+## Testing Strategy
+
+### Test Coverage
+
+- **Unit Tests**: 30 tests for business logic (mocked dependencies)
+- **Integration Tests**: 43 tests with real PostgreSQL database
+  - 22 repository tests (database operations)
+  - 21 HTTP handler tests (end-to-end API)
+- **Total**: 73 tests with ~92% code coverage
+
+### Running Tests Locally
+
+```bash
+# Quick unit tests during development
+make test-unit              # ~1 second
+
+# Full integration tests before push
+make test-integration       # ~7 seconds (includes Docker startup)
+
+# All tests for CI/CD validation
+make test                   # ~13 seconds
+```
+
 ## CI/CD
 
 GitHub Actions pipeline includes:
 
 - **Linting** - golangci-lint
-- **Testing** - Unit tests with coverage
+- **Testing** - Unit + Integration tests with coverage
 - **Security Scanning** - Trivy (containers) + Gosec (code)
 - **Docker Build** - Multi-stage builds with caching
 - **Dependency Review** - Blocks vulnerable dependencies
