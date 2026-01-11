@@ -32,6 +32,10 @@ A production-ready REST API for managing devices, built with Go following Clean 
   ```bash
   go install github.com/swaggo/swag/cmd/swag@latest
   ```
+- [goimports](https://pkg.go.dev/golang.org/x/tools/cmd/goimports) (for formatting: `make fmt`)
+  ```bash
+  go install golang.org/x/tools/cmd/goimports@latest
+  ```
 - `jq` (for parsing JSON in API examples)
   ```bash
   # macOS
@@ -52,6 +56,7 @@ make --version      # Make installed
 # Check optional tools (if needed)
 golangci-lint --version   # For linting
 swag --version            # For Swagger docs
+goimports --version       # For formatting
 jq --version              # For JSON parsing
 ```
 
@@ -233,7 +238,9 @@ make test-unit                  # Run unit tests only (fast)
 make test-integration           # Run integration tests (requires Docker)
 make test-coverage              # Generate coverage report
 make test-integration-coverage  # Integration coverage report
-make lint                       # Run linter (golangci-lint)
+make lint                       # Run linters (golangci-lint)
+make fmt                        # Format code (gofmt + goimports)
+make fmt-check                  # Check code formatting
 make docker-up                  # Start all services
 make docker-down                # Stop all services
 make db-up                      # Start only PostgreSQL
@@ -385,8 +392,9 @@ GitHub Actions pipeline includes:
 1. Follow **Test-Driven Development (TDD)** - Write tests first
 2. Use **Conventional Commits** - `feat:`, `fix:`, `chore:`, etc.
 3. Keep commits **granular** - One logical change per commit
-4. Run tests before committing - `make test`
-5. Ensure linting passes - `make lint`
+4. Format code before committing - `make fmt`
+5. Run tests before committing - `make test`
+6. Ensure linting passes - `make lint`
 
 
 ## Support
